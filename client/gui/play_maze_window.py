@@ -5,10 +5,9 @@ from gui.maze_canvas import MazeCanvas
 from algorithms.pathfinding import wave_algorithm, right_hand_rule
 
 class PlayMazeWindow(tk.Frame):
-    def __init__(self, parent, db, maze_data):
+    def __init__(self, parent, maze_data):
         super().__init__(parent, bg="#f0f0f0")
         self.parent = parent
-        self.db = db
         self.maze_data = maze_data
         self.maze = maze_data['map']
         self.entry = maze_data['entry']
@@ -214,4 +213,4 @@ class PlayMazeWindow(tk.Frame):
     
     def go_back(self):
         from gui.player_window import PlayerWindow
-        self.parent.show_frame(PlayerWindow, user_id=None, login="player")
+        self.parent.show_frame(PlayerWindow, user_id=None, login=self.parent.current_frame.login)

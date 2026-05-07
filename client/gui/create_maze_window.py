@@ -1,16 +1,15 @@
 # gui/create_maze_window.py
 import tkinter as tk
+import requests
 from tkinter import messagebox
-from db.database import DatabaseManager
 from gui.maze_canvas import MazeCanvas
 from algorithms.generation import recursive_backtracker, kruskal
 from algorithms.maze_utils import auto_place_entrance_exit, has_isolated_areas, count_dead_ends
 
 class CreateMazeWindow(tk.Frame):
-    def __init__(self, parent, db: DatabaseManager, admin_id):
+    def __init__(self, parent, admin_id):
         super().__init__(parent, bg="#f0f0f0")
         self.parent = parent
-        self.db = db
         self.admin_id = admin_id
         self.maze = None
         self.entry = None
@@ -268,9 +267,30 @@ class CreateMazeWindow(tk.Frame):
         if not name:
             messagebox.showerror("Ошибка", "Введите название")
             return
-        self.db.save_maze(name, self.height, self.width, self.maze, self.entry, self.exit)
-        messagebox.showinfo("Успех", "Лабиринт сохранён")
-        self.cancel()
+
+        try:
+            response = requests.post(
+                "http://127.0.0.1:5000/mazes",
+                json={
+                "name": name,
+                "height": self.height,
+                "width": self.width,
+                "maze_map": self.maze,
+                "entry": self.entry,
+                "exit": self.exit
+            }
+        )
+
+            data = response.json()
+
+            if data.get("status") == "success":
+                messagebox.showinfo("Успех", "Лабиринт сохранён")
+                self.cancel()
+            else:
+                messagebox.showerror("Ошибка", "Ошибка сохранения")
+
+        except Exception as e:
+            messagebox.showerror("Ошибка соединения", str(e))
     
     def cancel(self):
         from gui.admin_window import AdminWindow

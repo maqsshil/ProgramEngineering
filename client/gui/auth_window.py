@@ -1,14 +1,13 @@
 # gui/auth_window.py
+import requests
 import tkinter as tk
 from tkinter import messagebox
-from db.database import DatabaseManager
 from gui.register_window import RegisterWindow
 
 class AuthWindow(tk.Frame):
-    def __init__(self, parent, db: DatabaseManager):
+    def __init__(self, parent):
         super().__init__(parent, bg="#f0f0f0")
         self.parent = parent
-        self.db = db
         self.create_widgets()
     
     def create_widgets(self):
@@ -51,20 +50,31 @@ class AuthWindow(tk.Frame):
     def login(self):
         login = self.entry_login.get().strip()
         password = self.entry_password.get().strip()
-        if not (4 <= len(login) <= 10) or not (4 <= len(password) <= 10):
-            messagebox.showerror("Ошибка", "Логин и пароль должны быть 4-10 символов")
-            return
-        user = self.db.get_user(login, password)
-        if user:
-            user_id, login, role = user
-            if role == 'admin':
-                from gui.admin_window import AdminWindow
-                self.parent.show_frame(AdminWindow, user_id=user_id, login=login)
+
+        try:
+            response = requests.post(
+                "http://127.0.0.1:5000/login",
+                json={"login": login, "password": password}
+            )
+
+            data = response.json()
+
+            if data.get("status") == "success":
+                role = data.get("role")
+
+                if role == "admin":
+                    from gui.admin_window import AdminWindow
+                    self.parent.show_frame(AdminWindow, user_id=None, login=login)
+
+                elif role == "player":
+                    from gui.player_window import PlayerWindow
+                    self.parent.show_frame(PlayerWindow, user_id=None, login=login)
+
             else:
-                from gui.player_window import PlayerWindow
-                self.parent.show_frame(PlayerWindow, user_id=user_id, login=login)
-        else:
-            messagebox.showerror("Ошибка", "Неверный логин или пароль")
+                messagebox.showerror("Ошибка", data.get("message"))
+
+        except Exception as e:
+            messagebox.showerror("Ошибка соединения", str(e))
     
     def open_register(self):
-        RegisterWindow(self, self.db)
+        RegisterWindow(self)

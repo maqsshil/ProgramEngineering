@@ -1,6 +1,5 @@
 # main.py
 import tkinter as tk
-from db.database import DatabaseManager
 from gui.auth_window import AuthWindow
 
 class App(tk.Tk):
@@ -9,7 +8,6 @@ class App(tk.Tk):
         self.title("Автоматизированная система генерации лабиринтов")
         self.geometry("1100x750")
         self.minsize(900, 650)
-        self.db = DatabaseManager()
         self.current_frame = None
         self.show_auth()
         self.protocol("WM_DELETE_WINDOW", self.quit_app)
@@ -20,12 +18,11 @@ class App(tk.Tk):
     def show_frame(self, frame_class, **kwargs):
         if self.current_frame:
             self.current_frame.destroy()
-        self.current_frame = frame_class(self, self.db, **kwargs)
+        self.current_frame = frame_class(self, **kwargs)
         self.current_frame.pack(fill=tk.BOTH, expand=True)
     
     def quit_app(self):
-        self.db.close()
-        self.quit()
+        self.destroy()
 
 if __name__ == "__main__":
     app = App()

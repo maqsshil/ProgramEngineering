@@ -1,12 +1,11 @@
 # gui/register_window.py
 import tkinter as tk
+import requests
 from tkinter import messagebox
-from db.database import DatabaseManager
 
 class RegisterWindow(tk.Toplevel):
-    def __init__(self, parent, db: DatabaseManager):
+    def __init__(self, parent):
         super().__init__(parent)
-        self.db = db
         self.title("Регистрация")
         self.geometry("420x420")
         self.resizable(False, False)
@@ -73,7 +72,7 @@ class RegisterWindow(tk.Toplevel):
         login = self.entry_login.get().strip()
         password = self.entry_password.get().strip()
         confirm = self.entry_confirm.get().strip()
-        
+
         if not (4 <= len(login) <= 10):
             messagebox.showerror("Ошибка", "Логин 4-10 символов")
             return
@@ -83,9 +82,23 @@ class RegisterWindow(tk.Toplevel):
         if password != confirm:
             messagebox.showerror("Ошибка", "Пароли не совпадают")
             return
-        if self.db.user_exists(login):
-            messagebox.showerror("Ошибка", "Пользователь уже существует")
-            return
-        self.db.create_user(login, password, 'player')
-        messagebox.showinfo("Успех", "Регистрация успешна!")
-        self.destroy()
+
+        try:
+            response = requests.post(
+                "http://127.0.0.1:5000/register",
+                json={
+                    "login": login,
+                    "password": password
+                }
+            )
+
+            data = response.json()
+
+            if data.get("status") == "success":
+                messagebox.showinfo("Успех", "Регистрация успешна!")
+                self.destroy()
+            else:
+                messagebox.showerror("Ошибка", data.get("message"))
+
+        except Exception as e:
+            messagebox.showerror("Ошибка соединения", str(e))
