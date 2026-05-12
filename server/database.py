@@ -26,10 +26,14 @@ class Database:
         self.cursor.execute("""
         CREATE TABLE IF NOT EXISTS mazes (
             id SERIAL PRIMARY KEY,
-            name VARCHAR(100),
-            height INT,
-            width INT,
-            maze_map TEXT
+            name VARCHAR(100) NOT NULL,
+            height INTEGER NOT NULL,
+            width INTEGER NOT NULL,
+            maze_map TEXT NOT NULL,
+            entry_x INTEGER NOT NULL,
+            entry_y INTEGER NOT NULL,
+            exit_x INTEGER NOT NULL,
+            exit_y INTEGER NOT NULL
         );
         """)
 
@@ -58,21 +62,24 @@ class Database:
             return None
 
     def get_all_mazes(self):
-        self.cursor.execute("SELECT id, name, height, width, maze_map FROM mazes")
+        self.cursor.execute("""
+            SELECT id, name, height, width,
+                maze_map, entry_x, entry_y,
+                exit_x, exit_y
+            FROM mazes
+        """)
         rows = self.cursor.fetchall()
 
         result = []
         for row in rows:
-            maze = json.loads(row[4])
-
             result.append({
                 "id": row[0],
                 "name": row[1],
                 "height": row[2],
                 "width": row[3],
-                "map": maze,
-                "entry": None,
-                "exit": None
+                "map": json.loads(row[4]),
+                "entry": (row[5], row[6]),
+                "exit": (row[7], row[8])
             })
 
         return result
@@ -81,9 +88,20 @@ class Database:
         self.cursor.execute("DELETE FROM mazes WHERE id=%s", (maze_id,))
         self.conn.commit()
 
-    def save_maze(self, name, height, width, maze_map):
+    def save_maze(self, name, height, width, maze_map, entry, exit_):
         self.cursor.execute(
-            "INSERT INTO mazes (name, height, width, maze_map) VALUES (%s, %s, %s, %s)",
-            (name, height, width, json.dumps(maze_map))
+            """
+            INSERT INTO mazes (name, height, width, maze_map,
+                               entry_x, entry_y, exit_x, exit_y)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                name,
+                height,
+                width,
+                json.dumps(maze_map),
+                entry[0], entry[1],
+                exit_[0], exit_[1]
+            )
         )
-        self.conn.commit()
+        self.conn.commit()  

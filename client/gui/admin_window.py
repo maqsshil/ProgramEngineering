@@ -2,8 +2,6 @@ import requests
 import tkinter as tk
 from tkinter import messagebox
 from gui.create_maze_window import CreateMazeWindow
-from gui.help_window import HelpWindow
-from gui.maze_canvas import MazeCanvas
 
 
 class AdminWindow(tk.Frame):
@@ -33,6 +31,9 @@ class AdminWindow(tk.Frame):
 
         try:
             response = requests.get("http://127.0.0.1:5000/mazes")
+            if response.status_code != 200:
+                messagebox.showerror("Ошибка сервера", response.text)
+                return
             mazes = response.json()
         except Exception as e:
             messagebox.showerror("Ошибка соединения", str(e))
@@ -43,56 +44,49 @@ class AdminWindow(tk.Frame):
                  font=("Arial", 12)).pack(pady=20)
             return
 
-        cols = 2
-        row = col = 0
-
         for m in mazes:
-            card = tk.Frame(self.container,
-                relief=tk.RAISED,
-                bd=2,
+            card = tk.Frame(
+                self.container,
                 bg="white",
-                padx=10,
-                pady=10)
+                bd=2,
+                relief=tk.RAISED,
+                padx=20,
+                pady=15
+            )
+            card.pack(fill=tk.X, padx=20, pady=10)
 
-            card.grid(row=row, column=col, padx=10, pady=10)
-
-            cell = 4
-
-            preview = MazeCanvas(
+            title = tk.Label(
                 card,
-                m["map"],
-                theme="default",
-                cell_size=cell,
-                width=m["width"] * cell,
-                height=m["height"] * cell,
+                text=m["name"],
+                font=("Arial", 12, "bold"),
                 bg="white"
             )
+            title.pack(anchor="w")
 
-            preview.unbind("<Configure>")
-            preview.pack()
+            size = tk.Label(
+                card,
+                text=f"{m['height']} x {m['width']}",
+                bg="white"
+            )
+            size.pack(anchor="w")
 
-            tk.Label(card,
-                 text=f"{m['name']}\n{m['height']}x{m['width']}",
-                 bg="white",
-                 font=("Arial", 9)).pack(pady=5)
-
-            # Удаление по клику
+            # Кликабельность
             card.bind("<Button-1>",
                   lambda e, mid=m["id"]: self.confirm_delete(mid))
-            preview.bind("<Button-1>",
-                     lambda e, mid=m["id"]: self.confirm_delete(mid))
-
-            col += 1
-            if col >= cols:
-                col = 0
-                row += 1
+            title.bind("<Button-1>",
+                   lambda e, mid=m["id"]: self.confirm_delete(mid))
+            size.bind("<Button-1>",
+                  lambda e, mid=m["id"]: self.confirm_delete(mid))
 
     def open_maze(self, maze):
         messagebox.showinfo("Информация", f"Лабиринт: {maze['name']}")
 
-    def delete_maze(self, maze_id):
-        requests.delete(f"http://127.0.0.1:5000/mazes/{maze_id}")
-        self.load_mazes()
+    def confirm_delete(self, maze_id):
+        if messagebox.askyesno("Подтверждение", "Удалить этот лабиринт?"):
+            requests.delete(
+                f"http://127.0.0.1:5000/mazes/{maze_id}"
+            )
+            self.load_mazes()
 
     def create_maze(self):
         self.parent.show_frame(CreateMazeWindow, admin_id=None)

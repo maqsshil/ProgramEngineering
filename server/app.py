@@ -57,12 +57,16 @@ def delete_maze(maze_id):
 @app.route("/mazes", methods=["POST"])
 def save_maze():
     data = request.json
+
     db.save_maze(
         data["name"],
         data["height"],
         data["width"],
-        data["maze_map"]
+        data["maze_map"],
+        data["entry"],
+        data["exit"]
     )
+
     return jsonify({"status": "success"})
 
 if __name__ == "__main__":

@@ -1,37 +1,46 @@
 from collections import deque
 
 def wave_algorithm(maze, start, end):
-    """Возвращает список координат пути от start до end или None."""
     h, w = len(maze), len(maze[0])
     dist = [[-1]*w for _ in range(h)]
     queue = deque()
+
     dist[start[1]][start[0]] = 0
     queue.append(start)
+
     directions = [(0,1),(0,-1),(1,0),(-1,0)]
+
     while queue:
         x, y = queue.popleft()
-        if (x, y) == end:
-            break
+
         for dx, dy in directions:
             nx, ny = x+dx, y+dy
-            if 0 <= nx < w and 0 <= ny < h and maze[ny][nx] == 0 and dist[ny][nx] == -1:
-                dist[ny][nx] = dist[y][x] + 1
-                queue.append((nx, ny))
+
+            if 0 <= nx < w and 0 <= ny < h:
+                if maze[ny][nx] == 0 and dist[ny][nx] == -1:
+                    dist[ny][nx] = dist[y][x] + 1
+                    queue.append((nx, ny))
+
     if dist[end[1]][end[0]] == -1:
-        return None
-    # Восстанавливаем путь
+        return None, None
+
+    # восстановление пути
     path = []
     x, y = end
+
     while (x, y) != start:
         path.append((x, y))
         for dx, dy in directions:
             nx, ny = x+dx, y+dy
-            if 0 <= nx < w and 0 <= ny < h and dist[ny][nx] == dist[y][x] - 1:
-                x, y = nx, ny
-                break
+            if 0 <= nx < w and 0 <= ny < h:
+                if dist[ny][nx] == dist[y][x] - 1:
+                    x, y = nx, ny
+                    break
+
     path.append(start)
     path.reverse()
-    return path
+
+    return dist, path
 
 def right_hand_rule(maze, start, end, step_by_step=False, delay_ms=500):
     """

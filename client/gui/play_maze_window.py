@@ -5,9 +5,10 @@ from gui.maze_canvas import MazeCanvas
 from algorithms.pathfinding import wave_algorithm, right_hand_rule
 
 class PlayMazeWindow(tk.Frame):
-    def __init__(self, parent, maze_data):
+    def __init__(self, parent, maze_data, login):
         super().__init__(parent, bg="#f0f0f0")
         self.parent = parent
+        self.login = login
         self.maze_data = maze_data
         self.maze = maze_data['map']
         self.entry = maze_data['entry']
@@ -106,13 +107,47 @@ class PlayMazeWindow(tk.Frame):
         self.canvas.highlight_cell(self.exit[0], self.exit[1], "#e74c3c", permanent=True)
         
         if self.algo_var.get() == "wave":
-            path = wave_algorithm(self.maze, self.entry, self.exit)
-            if not path:
-                messagebox.showerror("Ошибка","Путь не найден!")
+            dist, path = wave_algorithm(
+                self.maze,
+                tuple(self.entry),
+                tuple(self.exit)
+            )
+
+            if not dist:
+                messagebox.showerror("Ошибка", "Путь не найден!")
                 self.running = False
                 self.start_btn.config(state=tk.NORMAL)
                 return
-            self.animate_path(path)
+
+            # очищаем холст
+            self.canvas.draw_maze()
+
+            # выводим числа сразу
+            for y in range(len(dist)):
+                for x in range(len(dist[0])):
+                    if dist[y][x] >= 0:
+                        h = len(dist)
+                        w = len(dist[0])
+                        total_width = w * self.canvas.cell_size
+                        total_height = h * self.canvas.cell_size
+                        canvas_width = self.canvas.winfo_width()
+                        canvas_height = self.canvas.winfo_height()
+                        offset_x = max(0, (canvas_width - total_width) // 2)
+                        offset_y = max(0, (canvas_height - total_height) // 2)
+                        for y in range(h):
+                            for x in range(w):
+                                if dist[y][x] >= 0:
+                                    cx = offset_x + x * self.canvas.cell_size + self.canvas.cell_size // 2
+                                    cy = offset_y + y * self.canvas.cell_size + self.canvas.cell_size // 2
+                                    self.canvas.create_text(
+                                        cx,
+                                        cy,
+                                        text=str(dist[y][x]),
+                                        fill="blue",
+                                        font=("Arial", int(self.canvas.cell_size/3))
+                                    )
+            self.running = False
+            self.start_btn.config(state=tk.NORMAL)
         else:
             mode = self.mode_var.get()
             delay = {"slow":700, "medium":300, "fast":100}[self.speed_var.get()]
@@ -152,31 +187,36 @@ class PlayMazeWindow(tk.Frame):
         move()
     
     def auto_right_hand(self, delay):
-        """Правой руки – бегающая клетка"""
         gen = right_hand_rule(self.maze, self.entry, self.exit)
         self.current_pos = self.entry
         self.canvas.highlight_cell(self.entry[0], self.entry[1], "#3498db")
-        
+
         def step():
             try:
                 pos, _ = next(gen)
-                
-                # Убираем подсветку с предыдущей позиции
+
+                # Нормализуем сравнение
+                if tuple(pos) == tuple(self.exit):
+                    self.canvas.highlight_cell(pos[0], pos[1], "#3498db")
+                    self.running = False
+                    self.start_btn.config(state=tk.NORMAL)
+                    return
+
                 if self.current_pos:
-                    self.canvas.reset_cell_color(self.current_pos[0], self.current_pos[1])
-                
-                # Перемещаемся
+                    self.canvas.reset_cell_color(
+                        self.current_pos[0],
+                        self.current_pos[1]
+                    )
+
                 self.current_pos = pos
                 self.canvas.highlight_cell(pos[0], pos[1], "#3498db")
-                
-                self.after_id = self.after(delay, step)
+
+                self.after(delay, step)
+
             except StopIteration:
-                # Достигли выхода
-                self.canvas.reset_cell_color(self.current_pos[0], self.current_pos[1])
                 self.running = False
                 self.start_btn.config(state=tk.NORMAL)
-                # Выход становится цветом темы (игрок вышел)
-                self.canvas.reset_cell_color(self.exit[0], self.exit[1])
+
         step()
     
     def step_by_step(self):
@@ -192,25 +232,28 @@ class PlayMazeWindow(tk.Frame):
     def next_step(self):
         try:
             pos, _ = next(self.step_gen)
-            
-            # Убираем подсветку с предыдущей позиции
+
+            if tuple(pos) == tuple(self.exit):
+                self.canvas.highlight_cell(pos[0], pos[1], "#3498db")
+                self.step_btn.config(state=tk.DISABLED)
+                self.running = False
+                self.start_btn.config(state=tk.NORMAL)
+                return
+
             if self.current_pos:
-                self.canvas.reset_cell_color(self.current_pos[0], self.current_pos[1])
-            
-            # Перемещаемся
+                self.canvas.reset_cell_color(
+                    self.current_pos[0],
+                    self.current_pos[1]
+                )
+
             self.current_pos = pos
             self.canvas.highlight_cell(pos[0], pos[1], "#3498db")
-            
+
         except StopIteration:
-            # Достигли выхода
             self.step_btn.config(state=tk.DISABLED)
             self.running = False
             self.start_btn.config(state=tk.NORMAL)
-            # Убираем персонажа
-            self.canvas.reset_cell_color(self.current_pos[0], self.current_pos[1])
-            # Выход становится цветом темы (игрок вышел)
-            self.canvas.reset_cell_color(self.exit[0], self.exit[1])
     
     def go_back(self):
         from gui.player_window import PlayerWindow
-        self.parent.show_frame(PlayerWindow, user_id=None, login=self.parent.current_frame.login)
+        self.parent.show_frame(PlayerWindow, user_id=None, login=self.login)

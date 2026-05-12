@@ -2,8 +2,6 @@ import requests
 import tkinter as tk
 from tkinter import messagebox
 from gui.play_maze_window import PlayMazeWindow
-from gui.help_window import HelpWindow
-from gui.maze_canvas import MazeCanvas
 
 
 class PlayerWindow(tk.Frame):
@@ -29,6 +27,9 @@ class PlayerWindow(tk.Frame):
 
         try:
             response = requests.get("http://127.0.0.1:5000/mazes")
+            if response.status_code != 200:
+                messagebox.showerror("Ошибка сервера", response.text)
+                return
             mazes = response.json()
         except Exception as e:
             messagebox.showerror("Ошибка соединения", str(e))
@@ -36,60 +37,45 @@ class PlayerWindow(tk.Frame):
 
         if not mazes:
             tk.Label(self.container, text="Нет доступных лабиринтов",
-                     font=("Arial", 12)).pack(pady=20)
+                 font=("Arial", 12)).pack(pady=20)
             return
-
-        cols = 2
-        row = col = 0
 
         for m in mazes:
             card = tk.Frame(
                 self.container,
-                relief=tk.RAISED,
-                bd=2,
                 bg="white",
-                padx=10,
-                pady=10
+                bd=2,
+                relief=tk.RAISED,
+                padx=20,
+                pady=15
             )
-            card.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
+            card.pack(fill=tk.X, padx=20, pady=10)
 
-            cell = 4  # уменьшенный размер
-
-            preview = MazeCanvas(
+            title = tk.Label(
                 card,
-                m["map"],
-                theme="default",
-                cell_size=cell,
-                width=m["width"] * cell,
-                height=m["height"] * cell,
+                text=m["name"],
+                font=("Arial", 12, "bold"),
                 bg="white"
             )
+            title.pack(anchor="w")
 
-            preview.unbind("<Configure>")  # отключаем авто‑resize
-            preview.pack()
-
-            tk.Label(
+            size = tk.Label(
                 card,
-                text=f"{m['name']}\n{m['height']}x{m['width']}",
-                bg="white",
-                font=("Arial", 9)
-            ).pack(pady=5)
+                text=f"{m['height']} x {m['width']}",
+                bg="white"
+            )
+            size.pack(anchor="w")
 
+            # Кликабельность
             card.bind("<Button-1>",
                   lambda e, maze=m: self.play_maze(maze))
-            preview.bind("<Button-1>",
-                     lambda e, maze=m: self.play_maze(maze))
-
-            col += 1
-            if col >= cols:
-                col = 0
-                row += 1
-
-        for i in range(cols):
-            self.container.grid_columnconfigure(i, weight=1)
+            title.bind("<Button-1>",
+                   lambda e, maze=m: self.play_maze(maze))
+            size.bind("<Button-1>",
+                  lambda e, maze=m: self.play_maze(maze))
 
     def play_maze(self, maze):
-        self.parent.show_frame(PlayMazeWindow, maze_data=maze)
+        self.parent.show_frame(PlayMazeWindow, maze_data=maze, login=self.login)
 
     def logout(self):
         from gui.auth_window import AuthWindow
