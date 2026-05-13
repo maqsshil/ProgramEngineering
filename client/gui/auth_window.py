@@ -11,33 +11,37 @@ class AuthWindow(tk.Frame):
         self.create_widgets()
     
     def create_widgets(self):
+        # Контейнер для полного центрирования
+        center_container = tk.Frame(self, bg="#f0f0f0")
+        center_container.pack(expand=True)
+
         # Заголовок
-        tk.Label(self, text="Авторизация", font=("Arial", 16, "bold"), bg="#f0f0f0", fg="#333").pack(pady=40)
-        
-        # Центрирующий фрейм
-        center_frame = tk.Frame(self, bg="#f0f0f0")
-        center_frame.pack(expand=True)
-        
-        # Используем grid для точного выравнивания
+        tk.Label(center_container, text="Авторизация", font=("Arial", 28, "bold"), bg="#f0f0f0", fg="#333").pack(pady=40)
+
+        # Центральная карточка
+        card = tk.Frame(center_container, bg="white", padx=50, pady=40, relief=tk.RAISED, bd=2)
+        card.pack()
+
         # Логин
-        tk.Label(center_frame, text="Логин:", font=("Arial", 10), bg="#f0f0f0", width=10, anchor="e").grid(row=0, column=0, padx=5, pady=8, sticky="e")
-        self.entry_login = tk.Entry(center_frame, width=20, font=("Arial", 10))
-        self.entry_login.grid(row=0, column=1, padx=5, pady=8)
-        
+        tk.Label(card, text="Логин:", font=("Arial", 14), bg="white").grid(row=0, column=0, sticky="e", pady=15, padx=10)
+
+        self.entry_login = tk.Entry(card, width=25, font=("Arial", 14))
+        self.entry_login.grid(row=0, column=1, pady=15, padx=10)
+
         # Пароль
-        tk.Label(center_frame, text="Пароль:", font=("Arial", 10), bg="#f0f0f0", width=10, anchor="e").grid(row=1, column=0, padx=5, pady=8, sticky="e")
-        self.entry_password = tk.Entry(center_frame, width=20, font=("Arial", 10), show="*")
-        self.entry_password.grid(row=1, column=1, padx=5, pady=8)
-        
-        # Кнопка "глаз"
-        self.eye_btn = tk.Button(center_frame, text="👁", command=self.toggle_password, width=3, bg="#cccccc", relief=tk.RAISED, bd=1)
-        self.eye_btn.grid(row=1, column=2, padx=2, pady=8)
-        
+        tk.Label(card, text="Пароль:", font=("Arial", 14), bg="white").grid(row=1, column=0, sticky="e", pady=15, padx=10)
+        self.entry_password = tk.Entry(card, width=25, font=("Arial", 14), show="*")
+        self.entry_password.grid(row=1, column=1, pady=15, padx=10)
+        self.eye_btn = tk.Button(card, text="👁", command=self.toggle_password, font=("Arial", 12), width=3, relief=tk.RAISED, bd=1, bg="#e0e0e0")
+        self.eye_btn.grid(row=1, column=2, padx=5)
+
         # Кнопки
-        btn_frame = tk.Frame(center_frame, bg="#f0f0f0")
+        btn_frame = tk.Frame(card, bg="white")
         btn_frame.grid(row=2, column=0, columnspan=3, pady=30)
-        tk.Button(btn_frame, text="Вход", command=self.login, width=12, bg="#cccccc", fg="#000000", font=("Arial", 10), relief=tk.RAISED, bd=2).pack(side=tk.LEFT, padx=10)
-        tk.Button(btn_frame, text="Регистрация", command=self.open_register, width=12, bg="#cccccc", fg="#000000", font=("Arial", 10), relief=tk.RAISED, bd=2).pack(side=tk.LEFT, padx=10)
+        tk.Button(btn_frame, text="Вход", command=self.login, width=14, height=2, font=("Arial", 12),
+            relief=tk.RAISED, bd=1, bg="#e0e0e0").pack(side=tk.LEFT, padx=15)
+        tk.Button(btn_frame, text="Регистрация", command=self.open_register, width=14, height=2, font=("Arial", 12),
+            relief=tk.RAISED, bd=1, bg="#e0e0e0").pack(side=tk.LEFT, padx=15)
     
     def toggle_password(self):
         if self.entry_password.cget("show") == "*":
@@ -77,4 +81,5 @@ class AuthWindow(tk.Frame):
             messagebox.showerror("Ошибка соединения", str(e))
     
     def open_register(self):
-        RegisterWindow(self)
+        from gui.register_window import RegisterWindow
+        self.parent.show_frame(RegisterWindow)
