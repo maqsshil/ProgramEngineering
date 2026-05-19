@@ -42,41 +42,47 @@ def wave_algorithm(maze, start, end):
 
     return dist, path
 
-def right_hand_rule(maze, start, end, step_by_step=False, delay_ms=500):
-    """
-    Генератор, возвращающий текущую позицию на каждом шаге.
-    Если step_by_step=True, ждёт нажатия клавиши, иначе задержка delay_ms.
-    """
-    # Направления: 0=вправо, 1=вниз, 2=влево, 3=вверх
-    # Для правила правой руки: если справа проход, повернуть направо и шагнуть; иначе если прямо проход – шагнуть; иначе повернуть налево.
-    dirs = [(1,0), (0,1), (-1,0), (0,-1)]
-    x, y = start
-    # Определяем начальное направление: смотрим, куда ведёт проход из стартовой точки
-    # Поскольку вход на границе, направление внутрь
-    if y == 0: direction = 1  # вниз
-    elif y == len(maze)-1: direction = 3  # вверх
-    elif x == 0: direction = 0  # вправо
-    else: direction = 2  # влево
+def right_hand_rule(maze, start, end):
+    dirs = [(1,0), (0,1), (-1,0), (0,-1)]  # R, D, L, U
 
-    visited = set()
+    x, y = start
+
+    # направление внутрь лабиринта
+    if y == 0:
+        direction = 1
+    elif y == len(maze)-1:
+        direction = 3
+    elif x == 0:
+        direction = 0
+    else:
+        direction = 2
+
+    yield (x, y), direction
+
     while (x, y) != end:
-        yield (x, y), direction
-        # Проверяем клетку справа
-        right_dir = (direction + 1) % 4
-        dx, dy = dirs[right_dir]
-        rx, ry = x+dx, y+dy
-        if 0 <= rx < len(maze[0]) and 0 <= ry < len(maze) and maze[ry][rx] == 0:
-            direction = right_dir
-            x, y = rx, ry
-        else:
-            # Проверяем прямо
+
+        # проверяем максимум 4 поворота
+        for _ in range(4):
+
+            # сначала проверяем справа
+            right_dir = (direction + 1) % 4
+            dx, dy = dirs[right_dir]
+            rx, ry = x + dx, y + dy
+
+            if 0 <= rx < len(maze[0]) and 0 <= ry < len(maze) and maze[ry][rx] == 0:
+                direction = right_dir
+                x, y = rx, ry
+                break
+
+            # иначе проверяем прямо
             dx, dy = dirs[direction]
-            fx, fy = x+dx, y+dy
+            fx, fy = x + dx, y + dy
+
             if 0 <= fx < len(maze[0]) and 0 <= fy < len(maze) and maze[fy][fx] == 0:
                 x, y = fx, fy
-            else:
-                # Поворачиваем налево (direction - 1)
-                direction = (direction - 1) % 4
-        # Для пошагового режима можно добавить ожидание через input(), но в GUI это будет отдельно
-        # В GUI реализуем таймер/события
-    yield (x, y), direction
+                break
+
+            # иначе поворачиваем налево
+            direction = (direction - 1) % 4
+
+        yield (x, y), direction
