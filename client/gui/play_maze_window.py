@@ -25,8 +25,8 @@ class PlayMazeWindow(tk.Frame):
         canvas_frame = tk.Frame(self, bg="#ffffff", relief=tk.SUNKEN, bd=2)
         canvas_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        self.canvas = MazeCanvas(canvas_frame, self.maze, theme="default", cell_size=25,
-                                 entry=self.entry, exit=self.exit, bg="white")
+        self.canvas = MazeCanvas( canvas_frame, self.maze, theme=self.maze_data.get("theme", "default"), cell_size=25,
+            entry=self.entry, exit=self.exit, bg="white")
         self.canvas.pack(fill=tk.BOTH, expand=True)
         
         tk.Label(control, text="Тема оформления:", font=("Arial", 10, "bold"), bg="#f0f0f0").pack(anchor="w", pady=(0,5))

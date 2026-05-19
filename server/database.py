@@ -17,19 +17,20 @@ class Database:
         self.cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
-            login VARCHAR(50) UNIQUE NOT NULL,
-            password VARCHAR(100) NOT NULL,
-            role VARCHAR(20) NOT NULL
+            login VARCHAR(10) UNIQUE NOT NULL,
+            password VARCHAR(10) NOT NULL,
+            role VARCHAR(6) NOT NULL
         );
         """)
 
         self.cursor.execute("""
         CREATE TABLE IF NOT EXISTS mazes (
             id SERIAL PRIMARY KEY,
-            name VARCHAR(100) NOT NULL,
+            name VARCHAR(20) UNIQUE NOT NULL,
             height INTEGER NOT NULL,
             width INTEGER NOT NULL,
             maze_map TEXT NOT NULL,
+            theme VARCHAR(10) NOT NULL,
             entry_x INTEGER NOT NULL,
             entry_y INTEGER NOT NULL,
             exit_x INTEGER NOT NULL,
@@ -64,7 +65,8 @@ class Database:
     def get_all_mazes(self):
         self.cursor.execute("""
             SELECT id, name, height, width,
-                maze_map, entry_x, entry_y,
+                maze_map, theme,
+                entry_x, entry_y,
                 exit_x, exit_y
             FROM mazes
         """)
@@ -78,8 +80,9 @@ class Database:
                 "height": row[2],
                 "width": row[3],
                 "map": json.loads(row[4]),
-                "entry": (row[5], row[6]),
-                "exit": (row[7], row[8])
+                "theme": row[5],
+                "entry": (row[6], row[7]),
+                "exit": (row[8], row[9])
             })
 
         return result
@@ -88,20 +91,27 @@ class Database:
         self.cursor.execute("DELETE FROM mazes WHERE id=%s", (maze_id,))
         self.conn.commit()
 
-    def save_maze(self, name, height, width, maze_map, entry, exit_):
-        self.cursor.execute(
-            """
-            INSERT INTO mazes (name, height, width, maze_map,
-                               entry_x, entry_y, exit_x, exit_y)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """,
-            (
-                name,
-                height,
-                width,
-                json.dumps(maze_map),
-                entry[0], entry[1],
-                exit_[0], exit_[1]
+    def save_maze(self, name, height, width, maze_map, theme, entry, exit_):
+        try:
+            self.cursor.execute(
+                """
+                INSERT INTO mazes (name, height, width, maze_map,
+                theme,
+                entry_x, entry_y, exit_x, exit_y)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    name,
+                    height,
+                    width,
+                    json.dumps(maze_map),
+                    theme,
+                    entry[0], entry[1],
+                    exit_[0], exit_[1]
+                )
             )
-        )
-        self.conn.commit()  
+            self.conn.commit()
+            return True
+        except:
+            self.conn.rollback()
+            return False
