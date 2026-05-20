@@ -132,13 +132,17 @@ class AdminWindow(tk.Frame):
         canvas_width = maze["width"] * cell
         canvas_height = maze["height"] * cell
 
-        preview = MazeCanvas(preview_frame, maze["map"],
-                             cell_size=cell,
-                             width=canvas_width,
-                             height=canvas_height,
-                             bg="white",
-                             highlightthickness=0,
-                             bd=0)
+        preview = MazeCanvas(
+            preview_frame, 
+            maze["map"],
+            cell_size=cell,
+            width=canvas_width,
+            height=canvas_height,
+            theme="preview",
+            bg="white",
+            highlightthickness=0,
+            bd=0
+        )
 
         preview.unbind("<Configure>")
 

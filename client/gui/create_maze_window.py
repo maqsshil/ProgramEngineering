@@ -14,7 +14,7 @@ class CreateMazeWindow(tk.Frame):
         self.maze = None
         self.entry = None
         self.exit = None
-        self.theme = "default"
+        self.theme = "summer"
         self.height = 11
         self.width = 11
         self.current_step = 1
@@ -58,10 +58,10 @@ class CreateMazeWindow(tk.Frame):
         tk.Label(self.block1_frame, text="Шаг 1: Параметры лабиринта", font=("Arial", 10, "bold"), bg="#f0f0f0").pack(anchor="w", padx=5, pady=2)
         
         tk.Label(self.block1_frame, text="Тема оформления:", bg="#f0f0f0").pack(anchor="w", padx=10)
-        self.theme_var = tk.StringVar(value="default")
+        self.theme_var = tk.StringVar(value="summer")
         theme_frame = tk.Frame(self.block1_frame, bg="#f0f0f0")
         theme_frame.pack(anchor="w", padx=20)
-        for k,v in [("default","Стандартная"),("dark","Тёмная"),("forest","Лесная"),("sand","Песчаная")]:
+        for k,v in [("winter","Зима"), ("spring","Весна"), ("summer","Лето"), ("autumn","Осень")]:
             tk.Radiobutton(theme_frame, text=v, variable=self.theme_var, value=k, bg="#f0f0f0").pack(anchor="w")
         
         size_frame = tk.Frame(self.block1_frame, bg="#f0f0f0")

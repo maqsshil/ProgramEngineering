@@ -152,6 +152,7 @@ class PlayerWindow(tk.Frame):
             cell_size=cell,
             width=canvas_width,
             height=canvas_height,
+            theme="preview",
             bg="white",
             highlightthickness=0,
             bd=0
