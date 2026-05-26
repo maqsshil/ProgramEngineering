@@ -18,41 +18,6 @@ def init_grid_for_generation(height, width):
 # algorithms/maze_utils.py
 from collections import deque
 
-def has_path(maze, start, end):
-    """Проверяет, существует ли путь от start до end (BFS)."""
-    h, w = len(maze), len(maze[0])
-    visited = [[False]*w for _ in range(h)]
-    q = deque([start])
-    visited[start[1]][start[0]] = True
-    dirs = [(0,1),(0,-1),(1,0),(-1,0)]
-    while q:
-        x, y = q.popleft()
-        if (x, y) == end:
-            return True
-        for dx, dy in dirs:
-            nx, ny = x+dx, y+dy
-            if 0 <= nx < w and 0 <= ny < h and not visited[ny][nx] and maze[ny][nx] == 0:
-                visited[ny][nx] = True
-                q.append((nx, ny))
-    return False
-
-def count_dead_ends(maze):
-    """Возвращает количество тупиков (клеток-проходов, у которых ровно 1 сосед-проход)."""
-    h, w = len(maze), len(maze[0])
-    dead_ends = 0
-    dirs = [(0,1),(0,-1),(1,0),(-1,0)]
-    for y in range(h):
-        for x in range(w):
-            if maze[y][x] == 0:
-                neighbors = 0
-                for dx, dy in dirs:
-                    nx, ny = x+dx, y+dy
-                    if 0 <= nx < w and 0 <= ny < h and maze[ny][nx] == 0:
-                        neighbors += 1
-                if neighbors == 1:
-                    dead_ends += 1
-    return dead_ends
-
 def has_isolated_areas(maze):
     """Проверяет, все ли проходимые клетки достижимы из стартовой позиции (вход)."""
     # Найдём первую попавшуюся проходимую клетку (вход)
@@ -84,6 +49,7 @@ def has_isolated_areas(maze):
             if maze[y][x] == 0 and not visited[y][x]:
                 return True
     return False
+
 def auto_place_entrance_exit(grid):
     """Автоматически расставляет вход и выход на периметре (не углы, не соседние)."""
     h = len(grid)

@@ -4,7 +4,7 @@ import requests
 from tkinter import messagebox
 from gui.maze_canvas import MazeCanvas
 from algorithms.generation import recursive_backtracker, kruskal
-from algorithms.maze_utils import auto_place_entrance_exit, has_isolated_areas, count_dead_ends
+from algorithms.maze_utils import auto_place_entrance_exit, has_isolated_areas
 
 class CreateMazeWindow(tk.Frame):
     def __init__(self, parent, admin_id):
@@ -400,7 +400,7 @@ class CreateMazeWindow(tk.Frame):
                 continue
 
             # проверка длины
-            min_length = (self.height * self.width) * 0.25
+            min_length = (self.height * self.width) * 0.20
             if len(path) < min_length:
                 continue
 

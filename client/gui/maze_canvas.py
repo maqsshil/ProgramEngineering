@@ -161,61 +161,6 @@ class MazeCanvas(tk.Canvas):
             tags="marker"
         )
     
-    def highlight_cell(self, x, y, color, permanent=False):
-        if not self.maze:
-            return
-        
-        h = len(self.maze)
-        w = len(self.maze[0])
-        total_width = w * self.cell_size
-        total_height = h * self.cell_size
-        canvas_width = self.winfo_width() if self.winfo_width() > 0 else total_width
-        canvas_height = self.winfo_height() if self.winfo_height() > 0 else total_height
-        
-        offset_x = max(0, (canvas_width - total_width) // 2)
-        offset_y = max(0, (canvas_height - total_height) // 2)
-        
-        x1 = offset_x + x * self.cell_size
-        y1 = offset_y + y * self.cell_size
-        x2 = x1 + self.cell_size
-        y2 = y1 + self.cell_size
-        
-        tag = "permanent" if permanent else "highlight"
-        if not permanent:
-            self.delete(f"cell_{x}_{y}_highlight")
-        rect = self.create_rectangle(x1, y1, x2, y2, fill=color, outline="", tag=tag)
-        if permanent:
-            self.tag_lower(tag)
-        self.update_idletasks()
-    
-    def reset_cell_color(self, x, y):
-        if not self.maze:
-            return
-
-        h = len(self.maze)
-        w = len(self.maze[0])
-
-        total_width = w * self.cell_size
-        total_height = h * self.cell_size
-
-        canvas_width = self.winfo_width() if self.winfo_width() > 0 else total_width
-        canvas_height = self.winfo_height() if self.winfo_height() > 0 else total_height
-
-        offset_x = max(0, (canvas_width - total_width) // 2)
-        offset_y = max(0, (canvas_height - total_height) // 2)
-
-        x1 = offset_x + x * self.cell_size
-        y1 = offset_y + y * self.cell_size
-
-        self.delete("character")
-
-        if self.maze[y][x] == 1:
-            if "wall" in self.images:
-                self.create_image(x1, y1, image=self.images["wall"], anchor="nw")
-        else:
-            if "path" in self.images:
-                self.create_image(x1, y1, image=self.images["path"], anchor="nw")
-    
     def load_textures(self):
         theme = self.theme
 

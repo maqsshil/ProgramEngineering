@@ -27,7 +27,7 @@ def login():
     else:
         return jsonify({
             "status": "error",
-            "message": "Invalid credentials"
+            "message": "Неверный логин или пароль"
         }), 401
 
 
@@ -40,7 +40,7 @@ def register():
     except:
         return jsonify({
             "status": "error",
-            "message": "User already exists"
+            "message": "ПОльзователь с таким логином уже существует"
         }), 400
 
 
