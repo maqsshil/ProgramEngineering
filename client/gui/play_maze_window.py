@@ -16,6 +16,7 @@ class PlayMazeWindow(tk.Frame):
         self.running = False
         self.after_id = None
         self.current_pos = None
+        self.step_index = 0
         self.create_widgets()
     
     def create_widgets(self):
@@ -25,22 +26,35 @@ class PlayMazeWindow(tk.Frame):
         canvas_frame = tk.Frame(self, bg="#ffffff", relief=tk.SUNKEN, bd=2)
         canvas_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        self.canvas = MazeCanvas(canvas_frame, self.maze, theme="default", cell_size=25,
-                                 entry=self.entry, exit=self.exit, bg="white")
+        self.canvas = MazeCanvas( canvas_frame, self.maze, theme=self.maze_data.get("theme", "default"), cell_size=25,
+            entry=self.entry, exit=self.exit, bg="white")
         self.canvas.pack(fill=tk.BOTH, expand=True)
         
         tk.Label(control, text="Тема оформления:", font=("Arial", 10, "bold"), bg="#f0f0f0").pack(anchor="w", pady=(0,5))
-        self.theme_var = tk.StringVar(value="default")
-        themes = [("default","Стандартная"),("dark","Тёмная"),("forest","Лесная"),("sand","Песчаная")]
-        for k,v in themes:
-            tk.Radiobutton(control, text=v, variable=self.theme_var, value=k, bg="#f0f0f0", command=self.change_theme).pack(anchor="w")
+        current_theme = self.maze_data.get("theme", "summer")
+        self.theme_var = tk.StringVar(value=current_theme)
+        themes = [("winter","Зима"), ("spring","Весна"), ("summer","Лето"), ("autumn","Осень")]
+        self.theme_buttons = []
+
+        for k, v in themes:
+            rb = tk.Radiobutton(
+                control,
+                text=v,
+                variable=self.theme_var,
+                value=k,
+                bg="#f0f0f0",
+                command=self.change_theme
+            )
+            rb.pack(anchor="w")
+            self.theme_buttons.append(rb)
         
         tk.Label(control, text="Алгоритм поиска:", font=("Arial", 10, "bold"), bg="#f0f0f0").pack(anchor="w", pady=(15,5))
         self.algo_var = tk.StringVar(value="wave")
         tk.Radiobutton(control, text="Волновой", variable=self.algo_var, value="wave", bg="#f0f0f0", command=self.toggle_options).pack(anchor="w")
         tk.Radiobutton(control, text="Правой руки", variable=self.algo_var, value="right_hand", bg="#f0f0f0", command=self.toggle_options).pack(anchor="w")
         
-        tk.Label(control, text="Режим прохождения:", font=("Arial", 10, "bold"), bg="#f0f0f0").pack(anchor="w", pady=(10,5))
+        self.mode_label = tk.Label(control, text="Режим прохождения:", font=("Arial", 10, "bold"), bg="#f0f0f0")
+        self.mode_label.pack(anchor="w", pady=(10,5))
         self.mode_var = tk.StringVar(value="auto")
         self.auto_mode = tk.Radiobutton(control, text="Автоматический", variable=self.mode_var, value="auto", bg="#f0f0f0", command=self.toggle_speed)
         self.auto_mode.pack(anchor="w")
@@ -52,36 +66,95 @@ class PlayMazeWindow(tk.Frame):
         tk.Label(self.speed_frame, text="Скорость прохождения:", font=("Arial", 10, "bold"), bg="#f0f0f0").pack(anchor="w")
         self.speed_var = tk.StringVar(value="medium")
         speeds = [("slow","Медленно"),("medium","Средне"),("fast","Быстро")]
-        for k,v in speeds:
-            tk.Radiobutton(self.speed_frame, text=v, variable=self.speed_var, value=k, bg="#f0f0f0").pack(anchor="w")
         
-        self.start_btn = tk.Button(control, text="Старт", command=self.start_solution, bg="#cccccc", fg="#000000", font=("Arial", 10), relief=tk.RAISED, bd=2)
+        self.speed_buttons = []
+        for k,v in speeds:
+            rb = tk.Radiobutton(
+                self.speed_frame,
+                text=v,
+                variable=self.speed_var,
+                value=k,
+                bg="#f0f0f0"
+            )
+            rb.pack(anchor="w")
+            self.speed_buttons.append(rb)
+        
+        self.start_btn = tk.Button(control, text="Применить", command=self.start_solution, bg="#cccccc", fg="#000000", font=("Arial", 10), relief=tk.RAISED, bd=2)
         self.start_btn.pack(pady=20)
         tk.Button(control, text="Назад", command=self.go_back, bg="#cccccc", fg="#000000", font=("Arial", 10), relief=tk.RAISED, bd=2).pack()
         
-        self.toggle_options()
         self.toggle_speed()
+        self.toggle_options()
         self.control_panel = control
     
+    def _set_theme_enabled(self, enabled: bool):
+        state = tk.NORMAL if enabled else tk.DISABLED
+        for btn in self.theme_buttons:
+            btn.config(state=state)
+
     def change_theme(self):
         self.canvas.theme = self.theme_var.get()
+        self.canvas.load_textures()
         self.canvas.draw_maze()
-        # Восстанавливаем вход (белый) и выход (красный)
-        self.canvas.highlight_cell(self.entry[0], self.entry[1], "#ffffff", permanent=True)
-        self.canvas.highlight_cell(self.exit[0], self.exit[1], "#e74c3c", permanent=True)
-        # Если есть текущая позиция – перерисовать персонажа
+
+        self.segments = {}
+
         if self.current_pos:
-            self.canvas.highlight_cell(self.current_pos[0], self.current_pos[1], "#3498db")
+            self._move_character(self.current_pos)
+
+        if hasattr(self, "history") and self.step_index > 0:
+            for i in range(1, self.step_index + 1):
+                p1 = self.history[i - 1]
+                p2 = self.history[i]
+                self._toggle_segment(p1, p2)
     
     def toggle_options(self):
+        self._reset_execution()
         if self.algo_var.get() == "wave":
+            # Отключаем заголовок режима
+            self.mode_label.config(fg="gray")
+
+            # Отключаем режим
             self.auto_mode.config(state=tk.DISABLED)
             self.step_mode.config(state=tk.DISABLED)
-            self.set_speed_state(tk.DISABLED)
+
+            # Отключаем скорость
+            for child in self.speed_frame.winfo_children():
+                if isinstance(child, (tk.Radiobutton, tk.Label)):
+                    child.config(state=tk.DISABLED)
+
         else:
+            # Включаем заголовок режима
+            self.mode_label.config(fg="black")
+
+            # Включаем режим
             self.auto_mode.config(state=tk.NORMAL)
             self.step_mode.config(state=tk.NORMAL)
+
+            # Включаем скорость
             self.toggle_speed()
+    
+    def _reset_execution(self):
+        if self.after_id:
+            try:
+                self.after_cancel(self.after_id)
+            except:
+                pass
+            self.after_id = None
+
+        self.running = False
+        self.start_btn.config(state=tk.NORMAL)
+
+        self._clear_step_panel()
+
+        self.canvas.delete("all")
+        self.canvas.draw_maze()
+
+        self.segments = {}
+        self.history = []
+        self.current_pos = None
+        self.step_index = 0
+        self._set_theme_enabled(True)
     
     def toggle_speed(self):
         if self.mode_var.get() == "auto":
@@ -93,18 +166,16 @@ class PlayMazeWindow(tk.Frame):
         for child in self.speed_frame.winfo_children():
             if isinstance(child, (tk.Radiobutton, tk.Label)):
                 child.config(state=state)
+
+    def _clear_step_panel(self):
+        if hasattr(self, "step_panel") and self.step_panel:
+            self.step_panel.destroy()
+            self.step_panel = None
     
     def start_solution(self):
-        if self.running:
-            return
-        self.running = True
-        self.start_btn.config(state=tk.DISABLED)
-        self.canvas.clear_highlights()
-        
-        # Рисуем вход белым
-        self.canvas.highlight_cell(self.entry[0], self.entry[1], "#ffffff", permanent=True)
-        # Выход красным
-        self.canvas.highlight_cell(self.exit[0], self.exit[1], "#e74c3c", permanent=True)
+        self._reset_execution()
+        self.canvas.update_idletasks()
+        self.path_lines = []
         
         if self.algo_var.get() == "wave":
             dist, path = wave_algorithm(
@@ -113,147 +184,294 @@ class PlayMazeWindow(tk.Frame):
                 tuple(self.exit)
             )
 
-            if not dist:
+            if not path:
                 messagebox.showerror("Ошибка", "Путь не найден!")
                 self.running = False
                 self.start_btn.config(state=tk.NORMAL)
                 return
 
-            # очищаем холст
             self.canvas.draw_maze()
 
-            # выводим числа сразу
-            for y in range(len(dist)):
-                for x in range(len(dist[0])):
-                    if dist[y][x] >= 0:
-                        h = len(dist)
-                        w = len(dist[0])
-                        total_width = w * self.canvas.cell_size
-                        total_height = h * self.canvas.cell_size
-                        canvas_width = self.canvas.winfo_width()
-                        canvas_height = self.canvas.winfo_height()
-                        offset_x = max(0, (canvas_width - total_width) // 2)
-                        offset_y = max(0, (canvas_height - total_height) // 2)
-                        for y in range(h):
-                            for x in range(w):
-                                if dist[y][x] >= 0:
-                                    cx = offset_x + x * self.canvas.cell_size + self.canvas.cell_size // 2
-                                    cy = offset_y + y * self.canvas.cell_size + self.canvas.cell_size // 2
-                                    self.canvas.create_text(
-                                        cx,
-                                        cy,
-                                        text=str(dist[y][x]),
-                                        fill="blue",
-                                        font=("Arial", int(self.canvas.cell_size/3))
-                                    )
-            self.running = False
-            self.start_btn.config(state=tk.NORMAL)
+            self.draw_shortest_path(path)
+            return
         else:
             mode = self.mode_var.get()
-            delay = {"slow":700, "medium":300, "fast":100}[self.speed_var.get()]
             if mode == "step":
                 self.step_by_step()
             else:
-                self.auto_right_hand(delay)
+                self.auto_right_hand()
     
-    def animate_path(self, path):
-        """Волновой алгоритм – бегающая клетка по заранее вычисленному пути"""
-        self.current_pos = self.entry
-        self.path = path
-        self.path_index = 0
-        
-        def move():
-            if self.path_index >= len(self.path):
-                # Достигли выхода
-                self.canvas.reset_cell_color(self.current_pos[0], self.current_pos[1])
-                self.running = False
-                self.start_btn.config(state=tk.NORMAL)
-                # Выход становится цветом темы (игрок вышел)
-                self.canvas.reset_cell_color(self.exit[0], self.exit[1])
-                return
-            
-            # Убираем подсветку с предыдущей позиции
-            if self.current_pos:
-                self.canvas.reset_cell_color(self.current_pos[0], self.current_pos[1])
-            
-            # Перемещаемся на следующую позицию
-            self.current_pos = self.path[self.path_index]
-            self.canvas.highlight_cell(self.current_pos[0], self.current_pos[1], "#3498db")
-            self.path_index += 1
-            
-            delay = 100
-            self.after_id = self.after(delay, move)
-        
-        move()
-    
-    def auto_right_hand(self, delay):
+    def draw_shortest_path(self, path):
+        """Рисует кратчайший путь сразу"""
+
+        cell = self.canvas.cell_size
+        h = len(self.maze)
+        w = len(self.maze[0])
+
+        total_width = w * cell
+        total_height = h * cell
+
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
+
+        offset_x = max(0, (canvas_width - total_width) // 2)
+        offset_y = max(0, (canvas_height - total_height) // 2)
+
+        points = []
+
+        for x, y in path:
+            cx = offset_x + x * cell + cell // 2
+            cy = offset_y + y * cell + cell // 2
+            points.append((cx, cy))
+
+        for i in range(1, len(points)):
+            x1, y1 = points[i - 1]
+            x2, y2 = points[i]
+
+            self.canvas.create_line(
+                x1, y1, x2, y2,
+                fill="#3498db",
+                width=4,
+                smooth=True
+            )
+
+        self.running = False
+        self.start_btn.config(state=tk.NORMAL)
+
+    def auto_right_hand(self):
+        self.canvas.update_idletasks()
+        self.running = True
+        self._set_theme_enabled(False)
+
+        self.segments = {}
+
         gen = right_hand_rule(self.maze, self.entry, self.exit)
-        self.current_pos = self.entry
-        self.canvas.highlight_cell(self.entry[0], self.entry[1], "#3498db")
+
+        pos, _ = next(gen)
+        self.current_pos = pos
+        self._move_character(pos)
 
         def step():
+            if not self.running:
+                return
+
             try:
                 pos, _ = next(gen)
 
-                # Нормализуем сравнение
-                if tuple(pos) == tuple(self.exit):
-                    self.canvas.highlight_cell(pos[0], pos[1], "#3498db")
-                    self.running = False
-                    self.start_btn.config(state=tk.NORMAL)
-                    return
-
-                if self.current_pos:
-                    self.canvas.reset_cell_color(
-                        self.current_pos[0],
-                        self.current_pos[1]
-                    )
+                prev = self.current_pos
+                self._toggle_segment(prev, pos)
 
                 self.current_pos = pos
-                self.canvas.highlight_cell(pos[0], pos[1], "#3498db")
+                self._move_character(pos)
 
-                self.after(delay, step)
+                if tuple(pos) == tuple(self.exit):
+                    self.running = False
+                    self.start_btn.config(state=tk.NORMAL)
+                    self._set_theme_enabled(True)
+                    self.after_id = None
+                    return
+
+                delay = {
+                    "slow": 700,
+                    "medium": 300,
+                    "fast": 100
+                }[self.speed_var.get()]
+
+                self.after_id = self.after(delay, step)
 
             except StopIteration:
                 self.running = False
                 self.start_btn.config(state=tk.NORMAL)
+                self._set_theme_enabled(True)
 
         step()
     
     def step_by_step(self):
-        """Правой руки – пошаговый режим с бегающей клеткой"""
-        gen = right_hand_rule(self.maze, self.entry, self.exit)
-        self.step_gen = gen
-        self.current_pos = self.entry
-        self.canvas.highlight_cell(self.entry[0], self.entry[1], "#3498db")
-        
-        self.step_btn = tk.Button(self.control_panel, text="Следующий шаг", command=self.next_step, bg="#cccccc", fg="#000000", font=("Arial", 10), relief=tk.RAISED, bd=2)
-        self.step_btn.pack(pady=5)
-    
-    def next_step(self):
-        try:
-            pos, _ = next(self.step_gen)
+        self.canvas.update_idletasks()
 
-            if tuple(pos) == tuple(self.exit):
-                self.canvas.highlight_cell(pos[0], pos[1], "#3498db")
-                self.step_btn.config(state=tk.DISABLED)
-                self.running = False
-                self.start_btn.config(state=tk.NORMAL)
+        self.segments = {}
+        self.history = []
+        self.step_index = 0
+
+        self.step_gen = right_hand_rule(self.maze, self.entry, self.exit)
+
+        pos, _ = next(self.step_gen)
+
+        self.history.append(pos)
+        self.current_pos = pos
+        self._move_character(pos)
+
+        self.step_panel = tk.Frame(self.control_panel, bg="#f0f0f0")
+        self.step_panel.pack(pady=10)
+
+        self.prev_btn = tk.Button(
+            self.step_panel,
+            text="←",
+            command=self.prev_step,
+            width=3,
+            font=("Arial", 14)
+        )
+        self.prev_btn.pack(side=tk.LEFT, padx=5)
+
+        self.next_btn = tk.Button(
+            self.step_panel,
+            text="→",
+            command=self.next_step,
+            width=3,
+            font=("Arial", 14)
+        )
+        self.next_btn.pack(side=tk.LEFT, padx=5)
+
+        self._update_step_buttons()
+        
+    def next_step(self):
+        if self.step_index < len(self.history) - 1:
+            prev = self.history[self.step_index]
+            self.step_index += 1
+            curr = self.history[self.step_index]
+        else:
+            try:
+                curr, _ = next(self.step_gen)
+                prev = self.history[self.step_index]
+                self.history.append(curr)
+                self.step_index += 1
+            except StopIteration:
                 return
 
-            if self.current_pos:
-                self.canvas.reset_cell_color(
-                    self.current_pos[0],
-                    self.current_pos[1]
-                )
-
-            self.current_pos = pos
-            self.canvas.highlight_cell(pos[0], pos[1], "#3498db")
-
-        except StopIteration:
-            self.step_btn.config(state=tk.DISABLED)
-            self.running = False
-            self.start_btn.config(state=tk.NORMAL)
+        self._toggle_segment(prev, curr)
+        self._move_character(curr)
+        self._update_step_buttons()
     
+    def prev_step(self):
+        if self.step_index <= 0:
+            return
+
+        curr = self.history[self.step_index]
+        prev = self.history[self.step_index - 1]
+
+        self._toggle_segment(prev, curr)
+
+        self.step_index -= 1
+        self.current_pos = prev
+
+        self._move_character(prev)
+
+        self._update_step_buttons()
+
+    def _draw_line(self, from_pos, to_pos):
+        cell = self.canvas.cell_size
+        h = len(self.maze)
+        w = len(self.maze[0])
+
+        total_width = w * cell
+        total_height = h * cell
+
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
+
+        offset_x = max(0, (canvas_width - total_width) // 2)
+        offset_y = max(0, (canvas_height - total_height) // 2)
+
+        def get_center(p):
+            x, y = p
+            return (
+                offset_x + x * cell + cell // 2,
+                offset_y + y * cell + cell // 2
+            )
+
+        c1 = get_center(from_pos)
+        c2 = get_center(to_pos)
+
+        line_id = self.canvas.create_line(
+            c1[0], c1[1],
+            c2[0], c2[1],
+            fill="#5dade2",
+            width=4,
+            tags="path_line"
+        )
+
+        self.canvas.tag_raise("path_line")
+        return line_id
+
+    def _move_character(self, pos):
+        self.canvas.delete("character")
+
+        self.current_pos = pos
+        x, y = pos
+
+        cell = self.canvas.cell_size
+        w = len(self.maze[0])
+        h = len(self.maze)
+
+        total_width = w * cell
+        total_height = h * cell
+
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
+
+        offset_x = max(0, (canvas_width - total_width) // 2)
+        offset_y = max(0, (canvas_height - total_height) // 2)
+
+        x1 = offset_x + x * cell
+        y1 = offset_y + y * cell
+
+        if "character" in self.canvas.images:
+            self.canvas.create_image(
+                x1,
+                y1,
+                image=self.canvas.images["character"],
+                anchor="nw",
+                tags="character"
+            )
+        else:
+            self.canvas.create_rectangle(
+                x1, y1,
+                x1 + cell,
+                y1 + cell,
+                fill="#3498db",
+                outline="",
+                tags="character"
+            )
+
+        self._restore_markers()
+        self.canvas.tag_raise("grid")
+        self.canvas.tag_raise("marker")
+        self.canvas.tag_raise("character")
+    
+    def _update_step_buttons(self):
+        if self.step_index > 0:
+            self.prev_btn.config(state=tk.NORMAL)
+        else:
+            self.prev_btn.config(state=tk.DISABLED)
+
+        if tuple(self.current_pos) == tuple(self.exit):
+            self.next_btn.config(state=tk.DISABLED)
+        else:
+            self.next_btn.config(state=tk.NORMAL)
+    
+    def _toggle_segment(self, p1, p2):
+        key = frozenset((p1, p2))
+
+        if key in self.segments:
+            self.canvas.delete(self.segments[key])
+            del self.segments[key]
+        else:
+            line_id = self._draw_line(p1, p2)
+            self.segments[key] = line_id
+    
+    def _restore_markers(self):
+        # удалить старые рамки
+        self.canvas.delete("marker")
+
+        # заново нарисовать
+        if self.entry:
+            self.canvas.draw_marker_frame(self.entry, "#2ecc71")
+
+        if self.exit:
+            self.canvas.draw_marker_frame(self.exit, "#e74c3c")
+
+        self.canvas.tag_raise("marker")
+
     def go_back(self):
         from gui.player_window import PlayerWindow
         self.parent.show_frame(PlayerWindow, user_id=None, login=self.login)

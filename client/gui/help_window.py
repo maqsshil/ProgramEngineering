@@ -56,25 +56,5 @@ class HelpWindow(tk.Toplevel):
         self.geometry(f"{w}x{h}+{x}+{y}")
     
     def open_browser(self):
-        html_content = """<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><title>О системе</title></head>
-<body style="font-family: Arial; max-width: 800px; margin: 40px auto; padding: 20px;">
-<h1>Автоматизированная система лабиринтов</h1>
-<p><b>Разработчики:</b> Зотов Н.П., Шильченков М.А.</p>
-<p><b>Руководитель:</b> Зеленко Л.С.</p>
-<p><b>Год:</b> 2026</p>
-<h2>Функции:</h2>
-<ul>
-<li>Генерация лабиринтов (рекурсивный бэктрекинг, Краскал)</li>
-<li>Поиск пути (волновой, правой руки)</li>
-<li>Сохранение в PostgreSQL</li>
-<li>4 темы оформления</li>
-<li>Роли: администратор, игрок</li>
-</ul>
-</body>
-</html>"""
         info_path = os.path.join(os.path.dirname(__file__), "..", "system_info.html")
-        with open(info_path, "w", encoding="utf-8") as f:
-            f.write(html_content)
         webbrowser.open(f"file://{info_path}")

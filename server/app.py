@@ -27,7 +27,7 @@ def login():
     else:
         return jsonify({
             "status": "error",
-            "message": "Invalid credentials"
+            "message": "Неверный логин или пароль"
         }), 401
 
 
@@ -40,7 +40,7 @@ def register():
     except:
         return jsonify({
             "status": "error",
-            "message": "User already exists"
+            "message": "ПОльзователь с таким логином уже существует"
         }), 400
 
 
@@ -57,17 +57,23 @@ def delete_maze(maze_id):
 @app.route("/mazes", methods=["POST"])
 def save_maze():
     data = request.json
-
-    db.save_maze(
+    success = db.save_maze(
         data["name"],
         data["height"],
         data["width"],
         data["maze_map"],
+        data["theme"],
         data["entry"],
         data["exit"]
     )
 
-    return jsonify({"status": "success"})
+    if success:
+        return jsonify({"status": "success"})
+    else:
+        return jsonify({
+            "status": "error",
+            "message": "Лабиринт с таким названием уже существует"
+        }), 400
 
 if __name__ == "__main__":
     app.run(debug=True)
