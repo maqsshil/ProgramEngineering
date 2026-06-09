@@ -30,7 +30,7 @@ class Database:
             height INTEGER NOT NULL,
             width INTEGER NOT NULL,
             maze_map TEXT NOT NULL,
-            theme VARCHAR(10) NOT NULL,
+            theme VARCHAR(6) NOT NULL,
             entry_x INTEGER NOT NULL,
             entry_y INTEGER NOT NULL,
             exit_x INTEGER NOT NULL,
